@@ -21,96 +21,31 @@ def load_model():
 
 # Load and preprocess audio data
 def load_and_preprocess_data(file_path, target_shape=(150, 150)):
-    try:
-        # Load the audio file
-        audio_data, sample_rate = librosa.load(file_path, sr=22050)  # Fixed sample rate
-        
-        # Ensure minimum duration
-        if len(audio_data) < sample_rate * 4:  # If less than 4 seconds
-            audio_data = np.pad(audio_data, (0, sample_rate * 4 - len(audio_data)))
-        
-        data = []
-        chunk_duration = 4  # seconds
-        overlap_duration = 2  # seconds
-        chunk_samples = int(chunk_duration * sample_rate)
-        overlap_samples = int(overlap_duration * sample_rate)
-        
-        # Calculate number of chunks
-        num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
-        
-        for i in range(num_chunks):
-            start = i * (chunk_samples - overlap_samples)
-            end = start + chunk_samples
-            
-            if end > len(audio_data):
-                # Pad the last chunk if needed
-                chunk = np.pad(audio_data[start:], (0, end - len(audio_data)))
-            else:
-                chunk = audio_data[start:end]
-            
-            # Create mel spectrogram
-            mel_spectrogram = librosa.feature.melspectrogram(
-                y=chunk,
-                sr=sample_rate,
-                n_mels=128,
-                fmax=8000
-            )
-            
-            # Convert to log scale
-            mel_spectrogram = librosa.power_to_db(mel_spectrogram, ref=np.max)
-            
-            # Resize and add channel dimension
-            mel_spectrogram = resize(np.expand_dims(mel_spectrogram, axis=-1), target_shape)
-            
-            # Normalize
-            mel_spectrogram = (mel_spectrogram - np.mean(mel_spectrogram)) / (np.std(mel_spectrogram) + 1e-8)
-            
-            data.append(mel_spectrogram)
-        
-        return np.array(data)
-    except Exception as e:
-        st.error(f"Error in preprocessing: {str(e)}")
-        return None
-
-# Record audio from microphone
-def record_audio(duration=5, fs=22050):  # Changed sample rate to match preprocessing
-    st.info(f"Recording for {duration} seconds...")
+    data = []
+    audio_data, sample_rate = librosa.load(file_path, sr=None)
     
-    try:
-        # Configure sounddevice
-        sd.default.samplerate = fs
-        sd.default.channels = 1
-        sd.default.dtype = 'float32'
+    # Normalize the audio data (same normalization as during training)
+    audio_data = audio_data / np.max(np.abs(audio_data))
+    
+    # Perform preprocessing (convert to Mel spectrogram and resize)
+    chunk_duration = 4  # seconds
+    overlap_duration = 2  # seconds
+    chunk_samples = chunk_duration * sample_rate
+    overlap_samples = overlap_duration * sample_rate
+    
+    num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
+    
+    for i in range(num_chunks):
+        start = i * (chunk_samples - overlap_samples)
+        end = start + chunk_samples
+        chunk = audio_data[start:end]
         
-        # Add a countdown
-        with st.spinner("Preparing to record..."):
-            st.write("Recording will start in:")
-            for i in range(3, 0, -1):
-                st.write(f"{i}...")
-                time.sleep(1)
-        
-        # Record audio
-        st.write("🎙️ Recording...")
-        recording = sd.rec(
-            int(duration * fs),
-            blocking=True
-        )
-        st.write("✅ Recording complete!")
-        
-        # Normalize audio
-        recording = recording.flatten()  # Ensure 1D array
-        recording = recording / (np.max(np.abs(recording)) + 1e-8)
-        
-        # Save to temporary file
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-        write(temp_file.name, fs, (recording * 32767).astype(np.int16))
-        
-        return temp_file.name
-        
-    except Exception as e:
-        st.error(f"Recording failed: {str(e)}")
-        st.info("Please check your microphone settings and try again.")
-        return None
+        # Compute Mel spectrogram for the chunk
+        mel_spectrogram = librosa.feature.melspectrogram(y=chunk, sr=sample_rate)
+        mel_spectrogram = resize(np.expand_dims(mel_spectrogram, axis=-1), target_shape)
+        data.append(mel_spectrogram)
+    
+    return np.array(data)
 
 # TensorFlow Model Prediction
 def model_prediction(X_test):
@@ -136,6 +71,28 @@ def model_prediction(X_test):
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None
+
+# Function to record audio
+def record_audio(duration, sample_rate=22050):
+    try:
+        # Record the audio using sounddevice
+        st.info(f"Recording for {duration} seconds...")
+        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
+        sd.wait()  # Wait for the recording to finish
+        
+        # Normalize audio data (ensure consistent scaling with model input)
+        audio_data = audio_data / np.max(np.abs(audio_data))  # Normalize to -1 to 1
+        
+        # Save the recorded audio to a temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+        write(temp_file.name, sample_rate, (audio_data * 32767).astype(np.int16))  # Convert to 16-bit PCM
+        st.info(f"Recording saved to {temp_file.name}")
+        
+        return temp_file.name  # Return the file path
+    
+    except Exception as e:
+        st.error(f"Error recording audio: {str(e)}")
+        return None
 
 # Streamlit UI
 st.set_page_config(page_title="Music Genre Classification", layout="wide")
@@ -203,7 +160,7 @@ elif app_mode == "Prediction":
             duration = st.slider("Recording duration (seconds):", 1, 10, 5)
         with col2:
             if st.button("Start Recording"):
-                filepath = record_audio(duration)
+                filepath = record_audio(duration)  # Use the new record_audio function
                 if filepath:
                     st.audio(filepath)
                     st.session_state.recorded_file = filepath
@@ -228,7 +185,7 @@ elif app_mode == "Prediction":
                     
                     if result_index is not None:
                         labels = ['blues', 'classical', 'country', 'disco', 'hiphop', 
-                                'jazz', 'metal', 'pop', 'reggae', 'rock']
+                                  'jazz', 'metal', 'pop', 'reggae', 'rock']
                         
                         # Show main prediction
                         st.balloons()
