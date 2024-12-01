@@ -1,6 +1,6 @@
-librosa
+librosa==0.10.2.post1
 numpy
-scipy
-sounddevice
-streamlit
-tensorflow
+scipy==1.14.1
+sounddevice==0.5.1
+streamlit==1.40.2
+tensorflow==2.16.2
