@@ -339,8 +339,11 @@ st.markdown("""
 
 # Authentication UI
 def show_login_page():
-    st.markdown("<h1 class='prediction-result'>Login</h1>", unsafe_allow_html=True)
-    
+    st.markdown("""
+    <h1 class='prediction-result'>
+        Music Genre Classifier<br>Login
+    </h1>
+    """, unsafe_allow_html=True)    
     with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
@@ -382,15 +385,44 @@ def show_history_page():
         st.info("No predictions yet!")
     else:
         for pred in predictions:
-            with st.expander(f"{pred[0]} - {pred[3]}", expanded=False):
-                st.markdown(f"""
-                <div class='card'>
-                    <p><strong>Genre:</strong> {pred[0]}</p>
-                    <p><strong>Confidence:</strong> {pred[1]:.2f}%</p>
-                    <p><strong>File:</strong> {pred[2]}</p>
-                    <p><strong>Date:</strong> {pred[3]}</p>
-                </div>
-                """, unsafe_allow_html=True)
+            # Safely handle each prediction field
+            try:
+                # Genre
+                genre = str(pred[0]) if pred[0] is not None else "Unknown"
+                
+                # Confidence - additional safety checks
+                try:
+                    # Handle potential byte or string conversion
+                    if isinstance(pred[1], bytes):
+                        confidence = "N/A"
+                    else:
+                        confidence = f"{float(str(pred[1])):.2f}%" if pred[1] is not None else "N/A"
+                except (ValueError, TypeError):
+                    confidence = "N/A"
+                
+                # Filename
+                filename = str(pred[2]) if pred[2] is not None else "No file"
+                
+                # Timestamp
+                timestamp = str(pred[3]) if pred[3] is not None else "Unknown date"
+                
+                # Create expander
+                with st.expander(f"{genre} - {timestamp}", expanded=False):
+                    history_details = f"""
+                    **Genre:** {genre}
+
+                    **Confidence:** {confidence}
+
+                    **File:** {filename}
+
+                    **Date:** {timestamp}
+                    """
+                    st.markdown(history_details)
+            
+            except Exception as e:
+                # Log the error and continue processing other predictions
+                st.error(f"Error processing prediction: {e}")
+                continue
 
 # Top navigation bar
 st.markdown("""
@@ -422,7 +454,27 @@ else:
         st.session_state.username = None
         
     
-    st.sidebar.markdown(f"Welcome, {st.session_state.username}!")
+    st.sidebar.markdown(f"""
+🎶 **Welcome, {st.session_state.username}!** 🎵  
+
+Step into a world where every note tells a story and every rhythm finds its identity. 🌟  
+
+Here at **Genre Vibes**, we believe that music isn’t just sound—it’s an expression of who we are.  
+
+With our genre classifier, you’re about to unlock the magic behind your favorite tunes.  
+From the soulful depths of blues, the electrifying energy of rock, the poetic vibes of hip-hop,  
+to the serene flow of classical melodies—we’re here to help you explore the essence of sound like never before.  
+
+✨ **Upload or Record your music**  
+✨ **Discover its genre**  
+✨ **Expand your playlist**  
+
+Your journey into the diverse world of music genres starts now.  
+Thank you for making us a part of your musical adventure! 🎧  
+
+Let’s redefine how you experience music, one song at a time! 💫
+""")
+
     
     # Navigation
     app_mode = st.selectbox("Select Page", 
@@ -439,38 +491,87 @@ else:
         """, unsafe_allow_html=True)
         
         st.markdown("""
-        <div class="card">
-            <h3>Goal</h3>
-            <p>Automatically classify music into one of 10 genres:</p>
-            <div class="genre-list">
-                <div class="genre-item">🎷 Blues</div>
-                <div class="genre-item">🎻 Classical</div>
-                <div class="genre-item">🤠 Country</div>
-                <div class="genre-item">💃 Disco</div>
-                <div class="genre-item">🎤 Hip Hop</div>
-                <div class="genre-item">🎺 Jazz</div>
-                <div class="genre-item">🤘 Metal</div>
-                <div class="genre-item">🎵 Pop</div>
-                <div class="genre-item">🌴 Reggae</div>
-                <div class="genre-item">🎸 Rock</div>
-            </div>
+    <div class="card">
+        <h3>Goal</h3>
+        <p>Explore the fascinating history of music, where every beat and rhythm tells a unique story. From the soulful origins that shaped emotional expression to the energetic sounds that define the spirit of rebellion, music has always been a powerful force for change. Dive deep into the roots of these musical movements, understand the evolution that has shaped them, and discover how they continue to inspire and influence artists and fans worldwide. The journey through these sounds is a journey through culture, history, and the heartbeat of generations.</p>
+    </div>
+
+    <div class="card">
+        <div class="genre-item">
+            <h4>🎷 <b>Blues:</b></h4>
+            <p>The blues originated in the deep South of the United States around the end of the 19th century. It was influenced by African American spirituals, work songs, and folk music. Blues has been a major influence on many other genres, including jazz, rock, and R&B.</p>
         </div>
-        """, unsafe_allow_html=True)
+        <div class="genre-item">
+            <h4>🎻 <b>Classical:</b></h4>
+            <p>Classical music is a broad term that refers to a long tradition of music that spans over a thousand years. Its roots go back to the Western church music of the medieval period, with significant contributions from composers like Beethoven, Mozart, and Bach. It's known for its complex structures and orchestral compositions.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🤠 <b>Country:</b></h4>
+            <p>Country music originated in the rural Southern United States in the 1920s. It blends elements of folk, Western, and blues music. The genre is known for its twangy guitars and storytelling lyrics. Artists like Johnny Cash and Dolly Parton have made it globally popular.</p>
+        </div>
+        <div class="genre-item">
+            <h4>💃 <b>Disco:</b></h4>
+            <p>Disco emerged in the 1970s, primarily in urban nightlife scenes. It combines elements of funk, soul, pop, and dance music, and was characterized by its upbeat rhythms and glamorous, danceable beats. It became extremely popular in clubs and influenced dance music for decades.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🎤 <b>Hip Hop:</b></h4>
+            <p>Hip hop culture originated in the Bronx, New York City, during the late 1970s. Initially, it consisted of four elements: rapping, DJing, graffiti, and breakdancing. Hip hop has become one of the most influential genres, representing youth culture and political expression through music, fashion, and art.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🎺 <b>Jazz:</b></h4>
+            <p>Jazz originated in the early 20th century in New Orleans, Louisiana. It’s characterized by swing and blue notes, call and response vocals, and improvisation. It is heavily influenced by African American musical traditions, and artists like Louis Armstrong and Duke Ellington helped shape its development.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🤘 <b>Metal:</b></h4>
+            <p>Heavy metal emerged in the late 1960s and early 1970s, influenced by hard rock, blues, and psychedelia. It is known for its loud, aggressive sound, distorted guitars, and fast tempos. Bands like Black Sabbath and Metallica helped define the genre, which has spawned numerous subgenres.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🎵 <b>Pop:</b></h4>
+            <p>Pop music is a genre that is characterized by its catchy melodies, upbeat tempos, and broad appeal. It emerged in the 1950s and quickly became the dominant genre worldwide, thanks to artists like The Beatles, Michael Jackson, and Madonna. Pop music often blends elements from various other genres.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🌴 <b>Reggae:</b></h4>
+            <p>Reggae music originated in Jamaica in the late 1960s. It developed from earlier genres like ska and rocksteady, characterized by rhythmic accents on the offbeat and socially conscious lyrics. Bob Marley, one of the genre's most famous icons, used reggae as a vehicle for political and social change.</p>
+        </div>
+        <div class="genre-item">
+            <h4>🎸 <b>Rock:</b></h4>
+            <p>Rock music began in the 1950s, heavily influenced by rhythm and blues, jazz, and gospel. Its early pioneers, like Chuck Berry and Elvis Presley, shaped the genre, which evolved through the decades into many subgenres. Rock remains one of the most popular and diverse genres globally.</p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
     
     elif app_mode == "About":
         st.markdown("<h1 class='prediction-result'>About the Project <span class='rotating-icon'>🎵</span></h1>", unsafe_allow_html=True)
         st.markdown("""
-        <div class="card">
-            <p style="font-size: 1.2em;">This project uses deep learning to classify music into 10 genres.</p>
-            <h3>Technology Stack:</h3>
-            <ul>
-                <li>TensorFlow for deep learning</li>
-                <li>Streamlit for the web interface</li>
-                <li>Librosa for audio processing</li>
+            <p style="font-size: 1.2em;">Welcome to the **Music Genre Classifier** project! This application is designed to explore the fascinating world of music genres using the power of **Deep Learning**. By analyzing the unique characteristics of audio signals, it can accurately predict the genre of your favorite tracks.</p>
+
+            <h2>Why This Project?</h2>
+            <p style="font-size: 1.1em;">Music is universal, but its genres provide a deeper understanding of rhythm, instruments, and culture. This project aims to bridge the gap between human intuition and machine intelligence in identifying musical genres. Whether you're an artist, a music enthusiast, or a developer curious about AI in audio, this app has something for you!</p>
+
+            <h2>How It Works</h2>
+            <p style="font-size: 1.1em;">Using state-of-the-art deep learning models, this application analyzes the audio features of music, such as **tempo**, **pitch**, **spectral properties**, and **rhythmic patterns**, to classify songs into one of ten predefined genres. The process involves feature extraction with **Librosa**, data preprocessing, and prediction using a trained **TensorFlow model**.</p>
+
+            <h2>Technology Stack</h2>
+            <ul style="font-size: 1.1em;">
+                <li><strong>TensorFlow:</strong> For building and training the deep learning model.</li>
+                <li><strong>Librosa:</strong> For extracting audio features from music files.</li>
+                <li><strong>Streamlit:</strong> For creating a simple, interactive, and user-friendly web interface.</li>
+                <li><strong>Python:</strong> The primary programming language for implementing the project.</li>
             </ul>
-        </div>
+
+            <h2>Features</h2>
+            <ul style="font-size: 1.1em;">
+                <li>Upload or Record audio files directly from your device.</li>
+                <li>Get instant genre predictions with high accuracy.</li>
+                <li>Easy-to-use interface for all users, regardless of technical expertise.</li>
+            </ul>
+
+            <h2>Future Enhancements</h2>
+            <p style="font-size: 1.1em;">The current implementation classifies music into 10 genres, but we plan to expand it to support more genres and provide additional features like identifying instruments, moods, and BPM (beats per minute). Stay tuned!</p>
+
+            <p style="text-align: center; font-size: 1.2em;">🎧 Let the music take over, one genre at a time! 🎶</p>
         """, unsafe_allow_html=True)
-    
+
     elif app_mode == "Prediction":
         st.markdown("<h1 class='prediction-result'>Model Prediction <span class='rotating-icon'>🎼</span></h1>", unsafe_allow_html=True)
         st.markdown("""
