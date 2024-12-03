@@ -89,7 +89,14 @@ init_db()
 @st.cache_resource
 def load_model():
     try:
-        model = tf.keras.models.load_model("app/src/Trained_model.keras")
+        # Check if running in Docker by detecting a specific Docker environment variable
+        if os.path.exists("/app/src/Trained_model.keras"):
+            model_path = "/app/src/Trained_model.keras"  # Docker path
+        else:
+            # Local path to the model
+            model_path = "/Users/king/Desktop/Study Material /End-to-End Software Project/Music_Genre_Classifier_ML:DL/app/src/Trained_model.keras"
+
+        model = tf.keras.models.load_model(model_path)
         return model
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
@@ -459,11 +466,11 @@ else:
 
 Step into a world where every note tells a story and every rhythm finds its identity. 🌟  
 
-Here at **Genre Vibes**, we believe that music isn’t just sound—it’s an expression of who we are.  
+Here at **Genre Vibes**, we believe that music isn't just sound—it's an expression of who we are.  
 
-With our genre classifier, you’re about to unlock the magic behind your favorite tunes.  
+With our genre classifier, you're about to unlock the magic behind your favorite tunes.  
 From the soulful depths of blues, the electrifying energy of rock, the poetic vibes of hip-hop,  
-to the serene flow of classical melodies—we’re here to help you explore the essence of sound like never before.  
+to the serene flow of classical melodies—we're here to help you explore the essence of sound like never before.  
 
 ✨ **Upload or Record your music**  
 ✨ **Discover its genre**  
@@ -472,7 +479,7 @@ to the serene flow of classical melodies—we’re here to help you explore the 
 Your journey into the diverse world of music genres starts now.  
 Thank you for making us a part of your musical adventure! 🎧  
 
-Let’s redefine how you experience music, one song at a time! 💫
+Let's redefine how you experience music, one song at a time! 💫
 """)
 
     
@@ -519,7 +526,7 @@ Let’s redefine how you experience music, one song at a time! 💫
         </div>
         <div class="genre-item">
             <h4>🎺 <b>Jazz:</b></h4>
-            <p>Jazz originated in the early 20th century in New Orleans, Louisiana. It’s characterized by swing and blue notes, call and response vocals, and improvisation. It is heavily influenced by African American musical traditions, and artists like Louis Armstrong and Duke Ellington helped shape its development.</p>
+            <p>Jazz originated in the early 20th century in New Orleans, Louisiana. It's characterized by swing and blue notes, call and response vocals, and improvisation. It is heavily influenced by African American musical traditions, and artists like Louis Armstrong and Duke Ellington helped shape its development.</p>
         </div>
         <div class="genre-item">
             <h4>🤘 <b>Metal:</b></h4>
