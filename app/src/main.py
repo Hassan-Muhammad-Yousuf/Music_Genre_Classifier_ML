@@ -12,89 +12,120 @@ from datetime import datetime
 import hashlib
 import base64
 
-# Database setup and authentication functions
+
+# Initialize the database
 def init_db():
     conn = sqlite3.connect('music_genre_app.db')
     c = conn.cursor()
     
     # Create users table
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  username TEXT UNIQUE NOT NULL,
-                  password TEXT NOT NULL,
-                  email TEXT UNIQUE NOT NULL)''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL
+        )
+    ''')
     
-    # Create predictions table
-    c.execute('''CREATE TABLE IF NOT EXISTS predictions
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  user_id INTEGER NOT NULL,
-                  prediction TEXT NOT NULL,
-                  confidence REAL NOT NULL,
-                  filename TEXT,
-                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (user_id) REFERENCES users (id))''')
+    # Create predictions table with a foreign key linking to users
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            prediction TEXT NOT NULL,
+            confidence REAL NOT NULL,
+            filename TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+    ''')
     
     conn.commit()
     conn.close()
 
+# Hash passwords securely
 def hash_password(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
+# Register a new user
 def register_user(username, password, email):
     conn = sqlite3.connect('music_genre_app.db')
     c = conn.cursor()
     try:
         hashed_pw = hash_password(password)
-        c.execute('INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
-                 (username, hashed_pw, email))
+        c.execute(
+            'INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
+            (username, hashed_pw, email)
+        )
         conn.commit()
-        return True
+        return True  # Registration successful
     except sqlite3.IntegrityError:
-        return False
+        return False  # Username or email already exists
     finally:
         conn.close()
 
+# Authenticate user during login
 def login_user(username, password):
     conn = sqlite3.connect('music_genre_app.db')
     c = conn.cursor()
     hashed_pw = hash_password(password)
-    c.execute('SELECT id, username FROM users WHERE username = ? AND password = ?',
-             (username, hashed_pw))
+    c.execute(
+        'SELECT id, username FROM users WHERE username = ? AND password = ?',
+        (username, hashed_pw)
+    )
     user = c.fetchone()
     conn.close()
-    return user
+    return user  # Returns (id, username) if successful, None otherwise
 
+# Save a prediction for a user
 def save_prediction(user_id, prediction, confidence, filename):
     conn = sqlite3.connect('music_genre_app.db')
     c = conn.cursor()
-    c.execute('INSERT INTO predictions (user_id, prediction, confidence, filename) VALUES (?, ?, ?, ?)',
-             (user_id, prediction, confidence, filename))
-    conn.commit()
-    conn.close()
+    try:
+        c.execute(
+            'INSERT INTO predictions (user_id, prediction, confidence, filename) VALUES (?, ?, ?, ?)',
+            (user_id, prediction, confidence, filename)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Error saving prediction: {e}")
+    finally:
+        conn.close()
 
+# Retrieve prediction history for a user
 def get_user_predictions(user_id):
     conn = sqlite3.connect('music_genre_app.db')
     c = conn.cursor()
-    c.execute('''SELECT prediction, confidence, filename, timestamp 
-                 FROM predictions WHERE user_id = ? 
-                 ORDER BY timestamp DESC''', (user_id,))
-    predictions = c.fetchall()
-    conn.close()
+    try:
+        c.execute('''
+            SELECT prediction, confidence, filename, timestamp 
+            FROM predictions 
+            WHERE user_id = ? 
+            ORDER BY timestamp DESC
+        ''', (user_id,))
+        predictions = c.fetchall()
+    except sqlite3.Error as e:
+        print(f"Error retrieving predictions: {e}")
+        predictions = []
+    finally:
+        conn.close()
     return predictions
 
-# Initialize database
+# Initialize the database
 init_db()
+
 
 # Function to load the trained model
 @st.cache_resource
 def load_model():
     try:
         # Check if running in Docker by detecting a specific Docker environment variable
-        if os.path.exists("/app/src/Trained_model.keras"):
-            model_path = "/app/src/Trained_model.keras"  # Docker path
+        if os.path.exists("./src/Trained_model.keras"):
+            model_path = "./src/Trained_model.keras"  # Docker path
         else:
             # Local path to the model
-            model_path = "/Users/king/Desktop/Study Material /End-to-End Software Project/Music_Genre_Classifier_ML:DL/app/src/Trained_model.keras"
+            model_path = "./src/Trained_model.keras"
 
         model = tf.keras.models.load_model(model_path)
         return model
