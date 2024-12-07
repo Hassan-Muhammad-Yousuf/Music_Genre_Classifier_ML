@@ -12,6 +12,8 @@ from datetime import datetime
 import hashlib
 import base64
 
+# Set page config as the first Streamlit command
+st.set_page_config(page_title="Music Genre Classification", layout="wide")
 
 # Initialize the database
 def init_db():
@@ -43,6 +45,23 @@ def init_db():
     
     conn.commit()
     conn.close()
+
+# Update database structure
+def update_db_structure():
+    conn = sqlite3.connect('music_genre_app.db')
+    c = conn.cursor()
+    try:
+        c.execute("ALTER TABLE predictions ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
+    finally:
+        conn.close()
+
+# Initialize and update the database
+init_db()
+update_db_structure()
 
 # Hash passwords securely
 def hash_password(password):
@@ -112,10 +131,6 @@ def get_user_predictions(user_id):
         conn.close()
     return predictions
 
-# Initialize the database
-init_db()
-
-
 # Function to load the trained model
 @st.cache_resource
 def load_model():
@@ -182,9 +197,12 @@ def model_prediction(X_test):
 def record_audio(duration, sample_rate=22050):
     try:
         st.info(f"Recording for {duration} seconds...")
-        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
+        sd.default.device = None  # Use default audio device
+        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='float32', device=None)
         sd.wait()
         
+        # Normalize the audio data
+        audio_data = audio_data.flatten()  # Flatten the array
         audio_data = audio_data / np.max(np.abs(audio_data))
         
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
@@ -204,9 +222,6 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = None
 if 'username' not in st.session_state:
     st.session_state.username = None
-
-# Set page config
-st.set_page_config(page_title="Music Genre Classification", layout="wide")
 
 # Custom CSS with red theme
 st.markdown("""
@@ -394,7 +409,7 @@ def show_login_page():
                 st.session_state.user_id = user[0]
                 st.session_state.username = user[1]
                 st.success("Successfully logged in!")
-                
+                st.rerun()
             else:
                 st.error("Invalid username or password")
     
@@ -490,7 +505,7 @@ else:
         st.session_state.logged_in = False
         st.session_state.user_id = None
         st.session_state.username = None
-        
+        st.rerun()
     
     st.sidebar.markdown(f"""
 🎶 **Welcome, {st.session_state.username}!** 🎵  
@@ -691,10 +706,11 @@ st.markdown('</div>', unsafe_allow_html=True)
 # Footer
 st.markdown(f"""
 <div style="position: fixed; left: 0; bottom: 0; width: 100%; background-color: rgba(0, 0, 0, 0.7); color: white; text-align: center; padding: 10px;">
-    Developed Hassan Muhammad Yousuf | {st.session_state.username if st.session_state.logged_in else 'Please login'}
+    Developed by Hassan Muhammad Yousuf | {st.session_state.username if st.session_state.logged_in else 'Please login'}
 </div>
 """, unsafe_allow_html=True)
 
 # Run the Streamlit app
 if __name__ == "__main__":
     pass
+
