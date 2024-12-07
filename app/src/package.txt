@@ -1,2 +1,5 @@
 libsndfile1
 portaudio19-dev
+build-essential
+libasound-dev
+
