@@ -3,7 +3,6 @@ import tensorflow as tf
 import numpy as np
 import librosa
 from tensorflow.image import resize
-import sounddevice as sd
 from scipy.io.wavfile import write
 import tempfile
 import os
@@ -194,26 +193,26 @@ def model_prediction(X_test):
         return None, None
 
 # Function to record audio
-def record_audio(duration, sample_rate=22050):
-    try:
-        st.info(f"Recording for {duration} seconds...")
-        sd.default.device = None  # Use default audio device
-        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='float32', device=None)
-        sd.wait()
-        
-        # Normalize the audio data
-        audio_data = audio_data.flatten()  # Flatten the array
-        audio_data = audio_data / np.max(np.abs(audio_data))
-        
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-        write(temp_file.name, sample_rate, (audio_data * 32767).astype(np.int16))
-        st.info(f"Recording saved to {temp_file.name}")
-        
-        return temp_file.name
-    
-    except Exception as e:
-        st.error(f"Error recording audio: {str(e)}")
-        return None
+# def record_audio(duration, sample_rate=22050):
+#     try:
+#         st.info(f"Recording for {duration} seconds...")
+#         sd.default.device = None  # Use default audio device
+#         audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='float32', device=None)
+#         sd.wait()
+#         
+#         # Normalize the audio data
+#         audio_data = audio_data.flatten()  # Flatten the array
+#         audio_data = audio_data / np.max(np.abs(audio_data))
+#         
+#         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+#         write(temp_file.name, sample_rate, (audio_data * 32767).astype(np.int16))
+#         st.info(f"Recording saved to {temp_file.name}")
+#         
+#         return temp_file.name
+#     
+#     except Exception as e:
+#         st.error(f"Error recording audio: {str(e)}")
+#         return None
 
 # Session state initialization
 if 'logged_in' not in st.session_state:
@@ -634,7 +633,7 @@ Let's redefine how you experience music, one song at a time! 💫
         """, unsafe_allow_html=True)
 
         # Option to upload or record audio
-        input_type = st.radio("Select Input Type:", ("Upload Audio File", "Record Audio"))
+        input_type = "Upload Audio File" #Remove the radio button
         filepath = None
 
         if input_type == "Upload Audio File":
@@ -644,18 +643,19 @@ Let's redefine how you experience music, one song at a time! 💫
                     temp_file.write(test_audio.read())
                     filepath = temp_file.name
                 st.audio(filepath)
-                
-        elif input_type == "Record Audio":
-            col1, col2 = st.columns(2)
-            with col1:
-                duration = st.slider("Recording duration (seconds):", 1, 30, 15)
-            with col2:
-                if st.button("Start Recording"):
-                    filepath = record_audio(duration)
-                    if filepath:
-                        st.audio(filepath)
-                        st.session_state.recorded_file = filepath
-                        st.success("Recording saved successfully!")
+
+        #Remove the "Record Audio" section
+        # elif input_type == "Record Audio":
+        #     col1, col2 = st.columns(2)
+        #     with col1:
+        #         duration = st.slider("Recording duration (seconds):", 1, 30, 15)
+        #     with col2:
+        #         if st.button("Start Recording"):
+        #             filepath = record_audio(duration)
+        #             if filepath:
+        #                 st.audio(filepath)
+        #                 st.session_state.recorded_file = filepath
+        #                 st.success("Recording saved successfully!")
 
         if filepath:
             st.session_state.filepath = filepath
