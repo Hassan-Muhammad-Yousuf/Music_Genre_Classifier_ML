@@ -135,11 +135,11 @@ def get_user_predictions(user_id):
 def load_model():
     try:
         # Check if running in Docker by detecting a specific Docker environment variable
-        if os.path.exists("./Trained_model.keras"):
-            model_path = "./Trained_model.keras"  # Docker path
+        if os.path.exists("Trained_model.keras"):
+            model_path = "Trained_model.keras"  # Docker path
         else:
             # Local path to the model
-            model_path = "./Trained_model.keras"
+            model_path = "Trained_model.keras"
 
         model = tf.keras.models.load_model(model_path)
         return model
