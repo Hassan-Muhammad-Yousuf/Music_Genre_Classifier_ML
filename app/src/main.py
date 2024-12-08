@@ -10,6 +10,7 @@ import sqlite3
 from datetime import datetime
 import hashlib
 import base64
+from pathlib import Path
 
 # Set page config as the first Streamlit command
 st.set_page_config(page_title="Music Genre Classification", layout="wide")
@@ -134,13 +135,15 @@ def get_user_predictions(user_id):
 @st.cache_resource
 def load_model():
     try:
-        # Check if running in Docker by detecting a specific Docker environment variable
-        if os.path.exists("Trained_model.keras"):
-            model_path = "Trained_model.keras"  # Docker path
-        else:
-            # Local path to the model
-            model_path = "Trained_model.keras"
+        # Determine the model path dynamically
+        current_dir = Path(__file__).resolve().parent  # Get the current script's directory
+        model_path = current_dir / 'Trained_model.keras'  # Construct the model's full path
 
+        # Check if the model file exists
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model file not found at {model_path}. Please ensure it exists in the root directory.")
+
+        # Load the model
         model = tf.keras.models.load_model(model_path)
         return model
     except Exception as e:

@@ -3,4 +3,5 @@ tensorflow
 numpy==1.26.4
 librosa==0.10.1
 scipy==1.11.4
+pathlib
 
